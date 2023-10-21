@@ -1,0 +1,23 @@
+{
+  "methods": [
+    {
+      "default": [
+        {
+          "java.lang.String": ["test", "test2"],
+          "int": [10,5,43,49,130,42,54,63],
+          "java.lang.Boolean": [true, false]
+        }
+      ],
+      "method3": [
+        {
+          "java.lang.String": ["method3", "test2"],
+          "int": [1, 2, 3],
+          "java.lang.Boolean": [true, false]
+        }
+      ]
+    }
+  ],
+  "options" : {
+    "numberOfTests": 1
+  }
+}
