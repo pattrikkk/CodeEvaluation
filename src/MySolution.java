@@ -1,14 +1,16 @@
+import java.util.Arrays;
+
 public class MySolution {
     private int a, b;
     private String c;
+    private int[] d;
 
-    public MySolution(String c, int a, int b) {
+    public MySolution(String c, int a, int b, int[] d) {
         this.c = c;
         this.a = a;
         this.b = b;
+        this.d = d;
     }
-
-    MySolution() {};
 
     public void setA(int aa) { a = aa; }
     public void setB(int bb) { b = bb; }
@@ -16,6 +18,8 @@ public class MySolution {
     public int getA() { return a; }
     public int getB() { return b; }
     public String getC() { return c; }
+    public int[] getD() { return d; }
+    public String getDString() { return Arrays.toString(d); }
 
     public int sum() {	return a + b; }
     public int product() { return a + b; }

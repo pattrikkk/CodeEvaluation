@@ -74,7 +74,6 @@ public class CodeEvaluation {
         System.out.println("Constructor(" + Arrays.toString(arguments) + "): (passed)");
 
         for (Method method : sameMethods) {
-            Class<?>[] parameterTypes = method.getParameterTypes();
             Method testMethod = TestClass.class.getDeclaredMethod(method.getName());
 
             Object mySolutionResult = method.invoke(mySolution);
@@ -109,6 +108,14 @@ public class CodeEvaluation {
         for (int i = 0; i < parameters.length(); i++) {
             if (parameters.getString(i).charAt(0) == 'i') {
                 arguments[i] = getIntValue(parameters.getString(i).substring(1), 100);
+            } else if (parameters.getString(i).charAt(0) == 'a') {
+                String[] divided = parameters.getString(i).substring(2).split(",");
+                int arrayLength = Integer.parseInt(divided[divided.length-1]);
+                int[] test = new int[arrayLength];
+                for (int j = 0; j < arrayLength; j++) {
+                    test[j] = getIntValue(parameters.getString(i).substring(1), 100);
+                }
+                arguments[i] = test;
             } else {
                 String a = parameters.getString(i);
                 JSONArray stringArray = config.optJSONArray(a.substring(1));
@@ -122,8 +129,8 @@ public class CodeEvaluation {
 
     public static JSONObject getDataFromJson() {
         try (FileReader fileReader = new FileReader("src/config.json")) {
-            JSONTokener tokener = new JSONTokener(fileReader);
-            return new JSONObject(tokener);
+            JSONTokener tokenizer = new JSONTokener(fileReader);
+            return new JSONObject(tokenizer);
         } catch (IOException e) {
             e.printStackTrace();
             return new JSONObject();
@@ -142,7 +149,7 @@ public class CodeEvaluation {
             // zero
             case 'R' -> val = -maxNumericValue + (Math.random() * (2 * maxNumericValue + 1));
             // random
-            case 'X' -> val = Double.parseDouble(input.substring(1));
+            case 'X' -> val = Double.parseDouble(input.substring(1).split(",")[0]);
             // exact number
             case 'I' -> {
                 String[] interv = input.substring(1).split(",");
