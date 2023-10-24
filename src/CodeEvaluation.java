@@ -39,37 +39,56 @@ public class CodeEvaluation {
     public static void runTest(List<Method> sameMethods, JSONObject config) throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
         MySolution mySolution = new MySolution();
         TestClass testClass = new TestClass();
-        Random random = new Random();
         for (Method method : sameMethods) {
             Class<?>[] parameterTypes = method.getParameterTypes();
-            Object[] arguments = new Object[parameterTypes.length];
-            JSONArray configObject = config.getJSONArray("methods").getJSONObject(0).optJSONArray(method.getName());
-            if (configObject == null) {
-                configObject = config.getJSONArray("methods").getJSONObject(0).getJSONArray("default");
-            }
-
-            for (int i = 0; i < parameterTypes.length; i++) {
-                Class<?> parameterType = parameterTypes[i];
-                String parameterTypeName = parameterType.getName();
-                JSONArray parameterValue = configObject.getJSONObject(0).getJSONArray(parameterTypeName);
-
-                int randomIndex = random.nextInt(parameterValue.length());
-                arguments[i] = parameterValue.get(randomIndex);
-            }
+            Object[] arguments = generateRandomArguments(config, method);
             Method testMethod = TestClass.class.getDeclaredMethod(method.getName(), parameterTypes);
 
             Object mySolutionResult = method.invoke(mySolution, arguments);
             Object testResult = testMethod.invoke(testClass, arguments);
 
             if (mySolutionResult == null) {
+                System.out.println("Method " + method.getName() + " with values " + Arrays.toString(arguments) + ": (passed)");
                 continue;
             }
             if (mySolutionResult.equals(testResult)) {
-                System.out.println("✔ Method " + method.getName() + ": " + mySolutionResult + " passed");
+                System.out.println("✔ Method " + method.getName() + ": (returned " + mySolutionResult + ") (passed)");
             } else {
-                System.out.println("X Method " + method.getName() + " failed");
+                System.out.println("X Method " + method.getName() + ": (returned " + testResult + " expected " + mySolutionResult + ") (failed)");
             }
         }
+    }
+
+    public static JSONArray getMethodFromJSON(JSONObject config, Method method) {
+        JSONArray configObject = config.getJSONArray("methods").getJSONObject(0).optJSONArray(method.getName());
+        if (configObject == null) {
+            configObject = config.getJSONArray("methods").getJSONObject(0).getJSONArray("default");
+        }
+        return configObject;
+    }
+
+    public static Object[] generateRandomArguments(JSONObject config, Method method) {
+        Random random = new Random();
+        Class<?>[] parameterTypes = method.getParameterTypes();
+        Object[] arguments = new Object[parameterTypes.length];
+        JSONArray configObject = getMethodFromJSON(config, method);
+
+        for (int i = 0; i < parameterTypes.length; i++) {
+            Class<?> parameterType = parameterTypes[i];
+            String parameterTypeName = parameterType.getName();
+            if (parameterTypeName.equals("int")) {
+                JSONObject intConfig = configObject.getJSONObject(0).getJSONObject(parameterTypeName);
+                int start = intConfig.getInt("start");
+                int end = intConfig.getInt("end");
+                arguments[i] = random.nextInt(end - start + 1) + start;
+            } else {
+                JSONArray parameterValue = configObject.getJSONObject(0).getJSONArray(parameterTypeName);
+                int randomIndex = random.nextInt(parameterValue.length());
+                arguments[i] = parameterValue.get(randomIndex);
+            }
+        }
+
+        return arguments;
     }
 
     public static JSONObject getDataFromJson() {

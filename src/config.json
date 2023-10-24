@@ -3,16 +3,14 @@
     {
       "default": [
         {
-          "java.lang.String": ["test", "test2"],
-          "int": [10,5,43,49,130,42,54,63],
-          "java.lang.Boolean": [true, false]
+          "java.lang.String": ["Viktor", "Katka", "Ivan", "Jozef", "Frantisek"],
+          "int": {"start": -50, "end": 0}
         }
       ],
-      "method3": [
+      "setA": [
         {
-          "java.lang.String": ["method3", "test2"],
-          "int": [1, 2, 3],
-          "java.lang.Boolean": [true, false]
+          "java.lang.String": ["Lubo", "Andrej", "Peter"],
+          "int": {"start": 300, "end": 450}
         }
       ]
     }
