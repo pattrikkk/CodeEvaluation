@@ -4,27 +4,28 @@ import org.json.JSONTokener;
 
 import java.io.FileReader;
 import java.io.IOException;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.*;
 
 public class CodeEvaluation {
-    public static void main(String[] args) throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+    public static void main(String[] args) throws InvocationTargetException, IllegalAccessException, NoSuchMethodException, InstantiationException {
         Class<?> classA = MySolution.class;
         Class<?> classB = TestClass.class;
+
 
         List<Method>[] methods = findSameMethods(classA, classB);
         List<Method> sameMethods = methods[0];
         List<Method> missingMethods = methods[1];
 
         JSONObject config = getDataFromJson();
-        JSONObject options = config.getJSONObject("options");
+        JSONObject tests = config.getJSONObject("testcases");
+        String[] testNames = JSONObject.getNames(tests);
 
-        int numberOfTests = options.getInt("numberOfTests");
-
-        for (int i = 0; i < numberOfTests; i++) {
-            System.out.println("Test " + (i + 1) + ":");
-            runTest(sameMethods, config);
+        for (String name : testNames) {
+            System.out.println(name + ":");
+            runTest(sameMethods, config, name);
             System.out.println();
         }
 
@@ -36,16 +37,48 @@ public class CodeEvaluation {
         }
     }
 
-    public static void runTest(List<Method> sameMethods, JSONObject config) throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
-        MySolution mySolution = new MySolution();
-        TestClass testClass = new TestClass();
+    public static Class<?>[] changeType(Class<?>[] types) {
+        Class<?>[] newTypes = new Class<?>[types.length];
+        for (int i = 0; i < types.length; i++) {
+            if (types[i].equals(Integer.class)) {
+                newTypes[i] = int.class;
+            } else {
+                newTypes[i] = types[i];
+            }
+        }
+        return newTypes;
+    }
+
+    public static void runTest(List<Method> sameMethods, JSONObject config, String testName) throws InvocationTargetException, IllegalAccessException, NoSuchMethodException, InstantiationException {
+        Object[] arguments = generateParameters(config, testName);
+
+        Class<?>[] argumentTypes = new Class[arguments.length];
+
+        for (int i = 0; i < arguments.length; i++) {
+            argumentTypes[i] = arguments[i].getClass();
+        }
+
+        argumentTypes = changeType(argumentTypes);
+
+        Constructor<?> constructor = checkIfConstructorExists(MySolution.class, argumentTypes);
+        Constructor<?> testConstructor = checkIfConstructorExists(TestClass.class, argumentTypes);
+
+        if (constructor == null || testConstructor == null) {
+            System.out.println("Constructor(" + Arrays.toString(argumentTypes) + "): (failed)");
+            return;
+        }
+
+        MySolution mySolution = (MySolution) constructor.newInstance(arguments);
+        TestClass testClass = (TestClass) testConstructor.newInstance(arguments);
+
+        System.out.println("Constructor(" + Arrays.toString(arguments) + "): (passed)");
+
         for (Method method : sameMethods) {
             Class<?>[] parameterTypes = method.getParameterTypes();
-            Object[] arguments = generateRandomArguments(config, method);
-            Method testMethod = TestClass.class.getDeclaredMethod(method.getName(), parameterTypes);
+            Method testMethod = TestClass.class.getDeclaredMethod(method.getName());
 
-            Object mySolutionResult = method.invoke(mySolution, arguments);
-            Object testResult = testMethod.invoke(testClass, arguments);
+            Object mySolutionResult = method.invoke(mySolution);
+            Object testResult = testMethod.invoke(testClass);
 
             if (mySolutionResult == null) {
                 System.out.println("Method " + method.getName() + " with values " + Arrays.toString(arguments) + ": (passed)");
@@ -59,32 +92,28 @@ public class CodeEvaluation {
         }
     }
 
-    public static JSONObject getMethodFromJSON(JSONObject config, Method method) {
-        JSONObject configObject = config.optJSONObject("methods").optJSONObject(method.getName());
-        if (configObject == null) {
-            configObject = config.getJSONObject("methods").getJSONObject("default");
+    public static Constructor<?> checkIfConstructorExists(Class<?> classA, Class<?>[] argumentTypes) {
+        try {
+            return classA.getConstructor(argumentTypes);
+        } catch (NoSuchMethodException e) {
+            return null;
         }
-        return configObject;
     }
 
-    public static Object[] generateRandomArguments(JSONObject config, Method method) {
+    public static Object[] generateParameters(JSONObject config, String testName) {
         Random random = new Random();
-        Class<?>[] parameterTypes = method.getParameterTypes();
-        Object[] arguments = new Object[parameterTypes.length];
-        JSONObject configObject = getMethodFromJSON(config, method);
+        JSONObject configObject = config.getJSONObject("testcases");
+        JSONArray parameters = configObject.optJSONArray(testName);
+        Object[] arguments = new Object[parameters.length()];
 
-        for (int i = 0; i < parameterTypes.length; i++) {
-            Class<?> parameterType = parameterTypes[i];
-            String parameterTypeName = parameterType.getName();
-            if (parameterTypeName.equals("int")) {
-                JSONObject intConfig = configObject.getJSONObject(parameterTypeName);
-                int start = intConfig.getInt("start");
-                int end = intConfig.getInt("end");
-                arguments[i] = random.nextInt(end - start + 1) + start;
+        for (int i = 0; i < parameters.length(); i++) {
+            if (parameters.getString(i).charAt(0) == 'i') {
+                arguments[i] = getIntValue(parameters.getString(i).substring(1), 100);
             } else {
-                JSONArray parameterValue = configObject.getJSONArray(parameterTypeName);
-                int randomIndex = random.nextInt(parameterValue.length());
-                arguments[i] = parameterValue.get(randomIndex);
+                String a = parameters.getString(i);
+                JSONArray stringArray = config.optJSONArray(a.substring(1));
+                String test = stringArray.getString(random.nextInt(stringArray.length()));
+                arguments[i] = test;
             }
         }
 
@@ -101,6 +130,28 @@ public class CodeEvaluation {
         }
     }
 
+    public static int getIntValue(String input, int maxNumericValue) {
+        char t = input.charAt(0);
+        double val = 0;
+        switch (t) {
+            case 'P' -> val = 1 + (Math.random() * maxNumericValue);
+            // positive
+            case 'N' -> val = -(Math.random() * maxNumericValue);
+            // negative
+            case 'Z' -> val = 0;
+            // zero
+            case 'R' -> val = -maxNumericValue + (Math.random() * (2 * maxNumericValue + 1));
+            // random
+            case 'X' -> val = Double.parseDouble(input.substring(1));
+            // exact number
+            case 'I' -> {
+                String[] interv = input.substring(1).split(",");
+                val = Double.parseDouble(interv[0]) + (int) (Math.random() * (Double.parseDouble(interv[1]) - Double.parseDouble(interv[0]) + 1));
+            } // interval
+        }
+        return (int) val;
+    }
+
     public static List<Method>[] findSameMethods(Class<?> classA, Class<?> classB) {
         Method[] methodsA = classA.getDeclaredMethods();
         Method[] methodsB = classB.getDeclaredMethods();
@@ -115,7 +166,7 @@ public class CodeEvaluation {
                     .orElse(null);
 
             if (matchingMethodB != null) {
-                if (methodA.getReturnType().getName().equals("void")) sameMethods.add(0, methodA);
+                if (methodA.getReturnType().getName().equals("void")); //sameMethods.add(0, methodA);
                 else sameMethods.add(methodA);
             } else {
                 missingMethods.add(methodA);

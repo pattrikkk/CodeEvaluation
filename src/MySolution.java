@@ -2,6 +2,14 @@ public class MySolution {
     private int a, b;
     private String c;
 
+    public MySolution(String c, int a, int b) {
+        this.c = c;
+        this.a = a;
+        this.b = b;
+    }
+
+    MySolution() {};
+
     public void setA(int aa) { a = aa; }
     public void setB(int bb) { b = bb; }
     public void setC(String cc, String dd) { c = cc + "," + dd; }

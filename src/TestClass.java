@@ -2,6 +2,14 @@ public class TestClass {
     private int a, b;
     private String c;
 
+    public TestClass(String c, int a, int b) {
+        this.c = c;
+        this.a = a;
+        this.b = b;
+    }
+
+    TestClass() {};
+
     public void setA(int aa) { a = aa; }
     public void setB(int bb) { b = bb; }
     public void setC(String cc, String dd) { c = dd; }

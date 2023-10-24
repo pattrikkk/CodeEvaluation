@@ -1,15 +1,24 @@
 {
-  "methods": {
-    "default": {
-      "java.lang.String": ["Viktor", "Katka", "Ivan", "Jozef", "Frantisek"],
-      "int": {"start": -50, "end": 0}
-    },
-    "setA": {
-      "java.lang.String": ["Lubo", "Andrej", "Peter"],
-      "int": {"start": 300, "end": 450}
-    }
+  "testcases": {
+    "Test": ["eOccupations", "iP", "iP"],
+    "Randomized test": ["eOccupations", "iR", "iR"],
+    "Exact values test": ["eOccupations", "iX5", "iX10"],
+    "Zero test": ["eOccupations", "iZ", "iZ"]
   },
+  "Occupations": ["Lawyer", "Doctor", "Teacher", "Programmer", "Lawyer", "Doctor", "Teacher", "Programmer"],
+  "Names": ["Peter", "Patrik", "Jozef", "Jana", "Eva", "Peter", "Patrik", "Jozef", "Jana", "Eva"],
   "options" : {
-    "numberOfTests": 5
+    "numberOfTests": 1
   }
 }
+
+/*
+i - integer
+e - array of names
+I - interval
+P - positive numbers
+N - negative numbers
+X - exact number
+Z - zero
+R - random number
+*/
