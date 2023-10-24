@@ -1,21 +1,15 @@
 {
-  "methods": [
-    {
-      "default": [
-        {
-          "java.lang.String": ["Viktor", "Katka", "Ivan", "Jozef", "Frantisek"],
-          "int": {"start": -50, "end": 0}
-        }
-      ],
-      "setA": [
-        {
-          "java.lang.String": ["Lubo", "Andrej", "Peter"],
-          "int": {"start": 300, "end": 450}
-        }
-      ]
+  "methods": {
+    "default": {
+      "java.lang.String": ["Viktor", "Katka", "Ivan", "Jozef", "Frantisek"],
+      "int": {"start": -50, "end": 0}
+    },
+    "setA": {
+      "java.lang.String": ["Lubo", "Andrej", "Peter"],
+      "int": {"start": 300, "end": 450}
     }
-  ],
+  },
   "options" : {
-    "numberOfTests": 1
+    "numberOfTests": 5
   }
 }

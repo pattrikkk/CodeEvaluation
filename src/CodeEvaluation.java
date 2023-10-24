@@ -59,10 +59,10 @@ public class CodeEvaluation {
         }
     }
 
-    public static JSONArray getMethodFromJSON(JSONObject config, Method method) {
-        JSONArray configObject = config.getJSONArray("methods").getJSONObject(0).optJSONArray(method.getName());
+    public static JSONObject getMethodFromJSON(JSONObject config, Method method) {
+        JSONObject configObject = config.optJSONObject("methods").optJSONObject(method.getName());
         if (configObject == null) {
-            configObject = config.getJSONArray("methods").getJSONObject(0).getJSONArray("default");
+            configObject = config.getJSONObject("methods").getJSONObject("default");
         }
         return configObject;
     }
@@ -71,18 +71,18 @@ public class CodeEvaluation {
         Random random = new Random();
         Class<?>[] parameterTypes = method.getParameterTypes();
         Object[] arguments = new Object[parameterTypes.length];
-        JSONArray configObject = getMethodFromJSON(config, method);
+        JSONObject configObject = getMethodFromJSON(config, method);
 
         for (int i = 0; i < parameterTypes.length; i++) {
             Class<?> parameterType = parameterTypes[i];
             String parameterTypeName = parameterType.getName();
             if (parameterTypeName.equals("int")) {
-                JSONObject intConfig = configObject.getJSONObject(0).getJSONObject(parameterTypeName);
+                JSONObject intConfig = configObject.getJSONObject(parameterTypeName);
                 int start = intConfig.getInt("start");
                 int end = intConfig.getInt("end");
                 arguments[i] = random.nextInt(end - start + 1) + start;
             } else {
-                JSONArray parameterValue = configObject.getJSONObject(0).getJSONArray(parameterTypeName);
+                JSONArray parameterValue = configObject.getJSONArray(parameterTypeName);
                 int randomIndex = random.nextInt(parameterValue.length());
                 arguments[i] = parameterValue.get(randomIndex);
             }
@@ -94,8 +94,7 @@ public class CodeEvaluation {
     public static JSONObject getDataFromJson() {
         try (FileReader fileReader = new FileReader("src/config.json")) {
             JSONTokener tokener = new JSONTokener(fileReader);
-            JSONObject jsonObject = new JSONObject(tokener);
-            return jsonObject;
+            return new JSONObject(tokener);
         } catch (IOException e) {
             e.printStackTrace();
             return new JSONObject();
