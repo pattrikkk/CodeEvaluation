@@ -11,11 +11,11 @@ import java.util.*;
 
 public class CodeEvaluation {
     public static void main(String[] args) throws InvocationTargetException, IllegalAccessException, NoSuchMethodException, InstantiationException {
-        Class<?> classA = MySolution.class;
-        Class<?> classB = TestClass.class;
+        Class<?> mySolution = MySolution.class;
+        Class<?> testClass = TestClass.class;
 
 
-        List<Method>[] methods = findSameMethods(classA, classB);
+        List<Method>[] methods = findSameMethods(mySolution, testClass);
         List<Method> sameMethods = methods[0];
         List<Method> missingMethods = methods[1];
 
@@ -50,7 +50,10 @@ public class CodeEvaluation {
     }
 
     public static void runTest(List<Method> sameMethods, JSONObject config, String testName) throws InvocationTargetException, IllegalAccessException, NoSuchMethodException, InstantiationException {
-        Object[] arguments = generateParameters(config, testName);
+
+        JSONObject configObject = config.getJSONObject("testcases");
+        JSONArray parameters = configObject.optJSONObject(testName).optJSONArray("constructor");
+        Object[] arguments = generateParameters(parameters);
 
         Class<?>[] argumentTypes = new Class[arguments.length];
 
@@ -73,14 +76,32 @@ public class CodeEvaluation {
 
         System.out.println("Constructor(" + Arrays.toString(arguments) + "): (passed)");
 
-        for (Method method : sameMethods) {
-            Method testMethod = TestClass.class.getDeclaredMethod(method.getName());
+        JSONArray methodsToRun = configObject.optJSONObject(testName).optJSONArray("methods");
 
-            Object mySolutionResult = method.invoke(mySolution);
-            Object testResult = testMethod.invoke(testClass);
+        for (int i = 0; i < methodsToRun.length(); i++) {
+            String methodName = methodsToRun.getJSONObject(i).getString("method");
+            JSONArray methodParameters = methodsToRun.getJSONObject(i).optJSONArray("parameters");
+            Object[] methodArguments;
+            if (methodParameters == null) {
+                methodArguments = new Object[0];
+            } else {
+                methodArguments = generateParameters(methodParameters);
+            }
+            Method method = sameMethods.stream()
+                    .filter(m -> m.getName().equals(methodName))
+                    .findFirst()
+                    .orElse(null);
+            if (method == null) {
+                System.out.println("Method " + methodName + ": (Not found)");
+                continue;
+            }
+            Method testMethod = TestClass.class.getDeclaredMethod(method.getName(), method.getParameterTypes());
+
+            Object mySolutionResult = method.invoke(mySolution, methodArguments);
+            Object testResult = testMethod.invoke(testClass, methodArguments);
 
             if (mySolutionResult == null) {
-                System.out.println("Method " + method.getName() + " with values " + Arrays.toString(arguments) + ": (passed)");
+                System.out.println("Method " + method.getName() + " with values " + Arrays.toString(methodArguments) + ": (passed)");
                 continue;
             }
             if (mySolutionResult.equals(testResult)) {
@@ -99,10 +120,8 @@ public class CodeEvaluation {
         }
     }
 
-    public static Object[] generateParameters(JSONObject config, String testName) {
+    public static Object[] generateParameters(JSONArray parameters) {
         Random random = new Random();
-        JSONObject configObject = config.getJSONObject("testcases");
-        JSONArray parameters = configObject.optJSONArray(testName);
         Object[] arguments = new Object[parameters.length()];
 
         for (int i = 0; i < parameters.length(); i++) {
@@ -110,13 +129,17 @@ public class CodeEvaluation {
                 arguments[i] = getIntValue(parameters.getString(i).substring(1), 100);
             } else if (parameters.getString(i).charAt(0) == 'a') {
                 String[] divided = parameters.getString(i).substring(2).split(",");
-                int arrayLength = Integer.parseInt(divided[divided.length-1]);
-                int[] test = new int[arrayLength];
+                int arrayLength = Integer.parseInt(divided[divided.length - 1]);
+                int[] testedArray = new int[arrayLength];
                 for (int j = 0; j < arrayLength; j++) {
-                    test[j] = getIntValue(parameters.getString(i).substring(1), 100);
+                    testedArray[j] = getIntValue(parameters.getString(i).substring(1), 100);
                 }
-                arguments[i] = test;
+                arguments[i] = testedArray;
+            } else if (parameters.getString(i).charAt(0) == 's') {
+                String testedString = parameters.getString(i).substring(1);
+                arguments[i] = testedString;
             } else {
+                JSONObject config = getDataFromJson();
                 String a = parameters.getString(i);
                 JSONArray stringArray = config.optJSONArray(a.substring(1));
                 String test = stringArray.getString(random.nextInt(stringArray.length()));
@@ -159,9 +182,9 @@ public class CodeEvaluation {
         return (int) val;
     }
 
-    public static List<Method>[] findSameMethods(Class<?> classA, Class<?> classB) {
-        Method[] methodsA = classA.getDeclaredMethods();
-        Method[] methodsB = classB.getDeclaredMethods();
+    public static List<Method>[] findSameMethods(Class<?> mySolution, Class<?> testClass) {
+        Method[] methodsA = mySolution.getDeclaredMethods();
+        Method[] methodsB = testClass.getDeclaredMethods();
 
         List<Method> sameMethods = new ArrayList<>();
         List<Method> missingMethods = new ArrayList<>();
@@ -173,8 +196,7 @@ public class CodeEvaluation {
                     .orElse(null);
 
             if (matchingMethodB != null) {
-                if (methodA.getReturnType().getName().equals("void")); //sameMethods.add(0, methodA);
-                else sameMethods.add(methodA);
+                sameMethods.add(methodA);
             } else {
                 missingMethods.add(methodA);
             }

@@ -1,9 +1,26 @@
 {
   "testcases": {
-    "Test": ["eOccupations", "iP", "iP", "aP10"],
-    "Randomized test": ["eOccupations", "iR", "iR", "aR5"],
-    "Exact values test": ["eOccupations", "iX5", "iX10", "aX3,5"],
-    "Zero test": ["eOccupations", "iZ", "iZ", "aZ5"]
+    "Test": {
+      "constructor": ["eOccupations", "iP", "iP", "aP10"],
+      "methods": [
+        {
+          "method": "getA"
+        },
+        {
+          "method": "setA",
+          "parameters": ["iP10"]
+        },
+        {
+          "method": "getA",
+        },
+        {
+          "method": "modulo"
+        },
+        {
+          "method": "getB"
+        }
+      ]
+    }
   },
   "Occupations": ["Lawyer", "Doctor", "Teacher", "Programmer", "Lawyer", "Doctor", "Teacher", "Programmer"],
   "Names": ["Peter", "Patrik", "Jozef", "Jana", "Eva", "Peter", "Patrik", "Jozef", "Jana", "Eva"],
@@ -11,12 +28,14 @@
 
 /*
 
+s - string
+
 i - integer
 
 e - randomly select 1 name from array
 (eNames selects random name from Names array)
 
-a - array of numbers
+a - array of integers
 (separator is comma and the length of the array is always the last e. g. aI5,50,3 means interval from 5 to 50 with 3 numbers)
 
 I - interval
