@@ -32,7 +32,8 @@ public class CodeEvaluation {
         if (missingMethods.size() > 0) {
             System.out.println("Missing methods:");
             for (Method method : missingMethods) {
-                System.out.println(method.getName());
+                String parameters = Arrays.toString(method.getParameterTypes());
+                System.out.println(method.getReturnType() + " " + method.getName() + "(" + parameters.substring(1, parameters.length()-1) + ")");
             }
         }
     }
@@ -78,15 +79,21 @@ public class CodeEvaluation {
 
         JSONArray methodsToRun = configObject.optJSONObject(testName).optJSONArray("methods");
 
+        if (methodsToRun == null) {
+            methodsToRun = sameMethods.stream()
+                    .filter(method -> method.getParameterCount() == 0)
+                    .map(method -> new JSONObject().put("method", method.getName()))
+                    .reduce(new JSONArray(), JSONArray::put, JSONArray::put);
+        }
+
         for (int i = 0; i < methodsToRun.length(); i++) {
             String methodName = methodsToRun.getJSONObject(i).getString("method");
             JSONArray methodParameters = methodsToRun.getJSONObject(i).optJSONArray("parameters");
             Object[] methodArguments;
-            if (methodParameters == null) {
-                methodArguments = new Object[0];
-            } else {
-                methodArguments = generateParameters(methodParameters);
-            }
+
+            if (methodParameters == null) methodArguments = new Object[0];
+            else methodArguments = generateParameters(methodParameters);
+
             Method method = sameMethods.stream()
                     .filter(m -> m.getName().equals(methodName))
                     .findFirst()

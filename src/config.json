@@ -4,20 +4,8 @@
       "constructor": ["eOccupations", "iP", "iP", "aP10"],
       "methods": [
         {
-          "method": "getA"
-        },
-        {
           "method": "setA",
           "parameters": ["iP10"]
-        },
-        {
-          "method": "getA",
-        },
-        {
-          "method": "modulo"
-        },
-        {
-          "method": "getB"
         }
       ]
     }
@@ -27,27 +15,16 @@
 }
 
 /*
-
 s - string
-
 i - integer
-
 e - randomly select 1 name from array
 (eNames selects random name from Names array)
-
 a - array of integers
 (separator is comma and the length of the array is always the last e. g. aI5,50,3 means interval from 5 to 50 with 3 numbers)
-
 I - interval
-
 P - positive numbers
-
 N - negative numbers
-
 X - exact number
-
 Z - zero
-
 R - random number
-
 */
