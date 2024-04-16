@@ -11,11 +11,11 @@ import java.util.*;
 
 public class CodeEvaluation {
     public static void main(String[] args) throws InvocationTargetException, IllegalAccessException, NoSuchMethodException, InstantiationException {
-        Class<?> mySolution = MySolution.class;
+        Class<?> referenceClass = ReferenceClass.class;
         Class<?> testClass = TestClass.class;
 
 
-        List<Method>[] methods = findSameMethods(mySolution, testClass);
+        List<Method>[] methods = findSameMethods(referenceClass, testClass);
         List<Method> sameMethods = methods[0];
         List<Method> missingMethods = methods[1];
 
@@ -25,7 +25,7 @@ public class CodeEvaluation {
 
         for (String name : testNames) {
             System.out.println(name + ":");
-            runTest(sameMethods, config, name);
+            runTest(sameMethods, name);
             System.out.println();
         }
 
@@ -38,20 +38,9 @@ public class CodeEvaluation {
         }
     }
 
-    public static Class<?>[] changeType(Class<?>[] types) {
-        Class<?>[] newTypes = new Class<?>[types.length];
-        for (int i = 0; i < types.length; i++) {
-            if (types[i].equals(Integer.class)) {
-                newTypes[i] = int.class;
-            } else {
-                newTypes[i] = types[i];
-            }
-        }
-        return newTypes;
-    }
+    public static void runTest(List<Method> sameMethods, String testName) throws InvocationTargetException, IllegalAccessException, NoSuchMethodException, InstantiationException {
 
-    public static void runTest(List<Method> sameMethods, JSONObject config, String testName) throws InvocationTargetException, IllegalAccessException, NoSuchMethodException, InstantiationException {
-
+        JSONObject config = getDataFromJson();
         JSONObject configObject = config.getJSONObject("testcases");
         JSONArray parameters = configObject.optJSONObject(testName).optJSONArray("constructor");
         Object[] arguments = generateParameters(parameters);
@@ -64,18 +53,27 @@ public class CodeEvaluation {
 
         argumentTypes = changeType(argumentTypes);
 
-        Constructor<?> constructor = checkIfConstructorExists(MySolution.class, argumentTypes);
+        Constructor<?> constructor = checkIfConstructorExists(ReferenceClass.class, argumentTypes);
         Constructor<?> testConstructor = checkIfConstructorExists(TestClass.class, argumentTypes);
 
+        String constructorArguments = "";
+        for (Object argument : arguments) {
+            if (argument.getClass().isArray()) {
+                constructorArguments += Arrays.toString((int[]) argument) + ", ";
+            } else constructorArguments += argument.toString() + ", ";
+        }
+
+        constructorArguments = constructorArguments.substring(0, constructorArguments.length() - 2);
+
         if (constructor == null || testConstructor == null) {
-            System.out.println("Constructor(" + Arrays.toString(argumentTypes) + "): (failed)");
+            System.out.println("Constructor(" + constructorArguments + "): (failed)");
             return;
         }
 
-        MySolution mySolution = (MySolution) constructor.newInstance(arguments);
-        TestClass testClass = (TestClass) testConstructor.newInstance(arguments);
+        System.out.println("Constructor(" + constructorArguments + "): (passed)");
 
-        System.out.println("Constructor(" + Arrays.toString(arguments) + "): (passed)");
+        ReferenceClass referenceInstance = (ReferenceClass) constructor.newInstance(arguments);
+        TestClass testInstance = (TestClass) testConstructor.newInstance(arguments);
 
         JSONArray methodsToRun = configObject.optJSONObject(testName).optJSONArray("methods");
 
@@ -86,14 +84,17 @@ public class CodeEvaluation {
                     .reduce(new JSONArray(), JSONArray::put, JSONArray::put);
         }
 
+        //Run methods from the JSON file
         for (int i = 0; i < methodsToRun.length(); i++) {
             String methodName = methodsToRun.getJSONObject(i).getString("method");
             JSONArray methodParameters = methodsToRun.getJSONObject(i).optJSONArray("parameters");
             Object[] methodArguments;
 
+            //Generate the arguments for the method
             if (methodParameters == null) methodArguments = new Object[0];
             else methodArguments = generateParameters(methodParameters);
 
+            //Find the method in the reference class
             Method method = sameMethods.stream()
                     .filter(m -> m.getName().equals(methodName))
                     .findFirst()
@@ -104,21 +105,46 @@ public class CodeEvaluation {
             }
             Method testMethod = TestClass.class.getDeclaredMethod(method.getName(), method.getParameterTypes());
 
-            Object mySolutionResult = method.invoke(mySolution, methodArguments);
-            Object testResult = testMethod.invoke(testClass, methodArguments);
-
-            if (mySolutionResult == null) {
-                System.out.println("Method " + method.getName() + " with values " + Arrays.toString(methodArguments) + ": (passed)");
+            //Check if the argument count is correct
+            if (method.getParameterCount() != methodArguments.length) {
+                System.out.println("Method " + method.getReturnType() + " " + method.getName() + "(" + Arrays.toString(method.getParameterTypes()).substring(1, Arrays.toString(method.getParameterTypes()).length() - 1) + "): (Wrong amount of arguments)");
                 continue;
             }
-            if (mySolutionResult.equals(testResult)) {
-                System.out.println("✔ Method " + method.getName() + ": (returned " + mySolutionResult + ") (passed)");
+
+
+            Class<?>[] methodArgumentTypes = new Class[methodArguments.length];
+            for (int j = 0; j < methodArguments.length; j++) {
+                methodArgumentTypes[j] = methodArguments[j].getClass();
+            }
+            methodArgumentTypes = changeType(methodArgumentTypes);
+
+            //Check for argument type mismatch
+            boolean argumentTypeMismatch = false;
+            for (int j = 0; j < methodArguments.length; j++) {
+                if (!method.getParameterTypes()[j].equals(methodArgumentTypes[j])) {
+                    argumentTypeMismatch = true;
+                    System.out.println("Method " + method.getReturnType() + " " + method.getName() + "(" + Arrays.toString(method.getParameterTypes()).substring(1, Arrays.toString(method.getParameterTypes()).length() - 1) + "): (Argument type mismatch)");
+                }
+            }
+            if (argumentTypeMismatch) continue;
+
+            //Invoke the methods
+            Object referenceResult = method.invoke(referenceInstance, methodArguments);
+            Object testResult = testMethod.invoke(testInstance, methodArguments);
+
+            //Create a string of argument types
+            String argumentString = Arrays.toString(methodArguments).substring(1, Arrays.toString(methodArguments).length() - 1);
+
+            //Print the results
+            if (referenceResult == null || referenceResult.equals(testResult)) {
+                System.out.println("✔ Method " + method.getReturnType() + " " + method.getName() + "(" + argumentString + ")" + ": (returned " + referenceResult + ") (passed)");
             } else {
-                System.out.println("X Method " + method.getName() + ": (returned " + testResult + " expected " + mySolutionResult + ") (failed)");
+                System.out.println("X Method " + method.getReturnType() + " " + method.getName() + "(" + argumentString + ")" + ": (returned " + testResult + " expected " + referenceResult + ") (failed)");
             }
         }
     }
 
+    //Checks if a constructor exists in a class
     public static Constructor<?> checkIfConstructorExists(Class<?> classA, Class<?>[] argumentTypes) {
         try {
             return classA.getConstructor(argumentTypes);
@@ -127,6 +153,7 @@ public class CodeEvaluation {
         }
     }
 
+    //Generates the parameters for the constructor and methods
     public static Object[] generateParameters(JSONArray parameters) {
         Random random = new Random();
         Object[] arguments = new Object[parameters.length()];
@@ -167,6 +194,7 @@ public class CodeEvaluation {
         }
     }
 
+    //Generates a random integer based on the input
     public static int getIntValue(String input, int maxNumericValue) {
         char t = input.charAt(0);
         double val = 0;
@@ -189,8 +217,9 @@ public class CodeEvaluation {
         return (int) val;
     }
 
-    public static List<Method>[] findSameMethods(Class<?> mySolution, Class<?> testClass) {
-        Method[] methodsA = mySolution.getDeclaredMethods();
+    //Static analysis of the classes to get the same and missing methods
+    public static List<Method>[] findSameMethods(Class<?> referenceClass, Class<?> testClass) {
+        Method[] methodsA = referenceClass.getDeclaredMethods();
         Method[] methodsB = testClass.getDeclaredMethods();
 
         List<Method> sameMethods = new ArrayList<>();
@@ -212,6 +241,19 @@ public class CodeEvaluation {
         return new List[]{sameMethods, missingMethods};
     }
 
+    public static Class<?>[] changeType(Class<?>[] types) {
+        Class<?>[] newTypes = new Class<?>[types.length];
+        for (int i = 0; i < types.length; i++) {
+            if (types[i].equals(Integer.class)) {
+                newTypes[i] = int.class;
+            } else {
+                newTypes[i] = types[i];
+            }
+        }
+        return newTypes;
+    }
+
+    //Checks if two methods have the same name, return type and parameter types
     public static boolean areMethodsSignatureEqual(Method methodA, Method methodB) {
         return Objects.equals(methodA.getName(), methodB.getName()) &&
                 Objects.equals(methodA.getReturnType(), methodB.getReturnType()) &&

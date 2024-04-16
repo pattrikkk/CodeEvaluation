@@ -1,17 +1,37 @@
 {
   "testcases": {
     "Test": {
-      "constructor": ["eOccupations", "iP", "iP", "aP10"],
+      "constructor": ["eOccupations", "iP", "iP"],
+      "methods": [
+        {
+          "method": "setA",
+          "parameters": ["eOccupations"]
+        },
+        {
+          "method": "setStaticInt"
+        },
+        {
+          "method": "getStaticInt"
+        }
+      ]
+    },
+    "Random values test": {
+      "constructor": ["eOccupations", "iP", "iP"],
       "methods": [
         {
           "method": "setA",
           "parameters": ["iP10"]
+        },
+        {
+          "method": "setStaticInt"
+        },
+        {
+          "method": "getStaticInt"
         }
       ]
     }
   },
   "Occupations": ["Lawyer", "Doctor", "Teacher", "Programmer", "Lawyer", "Doctor", "Teacher", "Programmer"],
-  "Names": ["Peter", "Patrik", "Jozef", "Jana", "Eva", "Peter", "Patrik", "Jozef", "Jana", "Eva"],
 }
 
 /*
