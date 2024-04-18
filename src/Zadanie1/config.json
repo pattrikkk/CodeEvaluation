@@ -1,0 +1,52 @@
+{
+  "testcases": {
+    "Exact values test": {
+      "constructor": ["iX10", "iX20", "iX5", "iX6", "cs"],
+      "methods": [
+        {
+          "method": "setValues",
+          "parameters": ["iX10", "iX20", "iX5", "iX10", "cs"]
+        },
+        {
+          "method": "left"
+        },
+        {
+          "method": "left"
+        },
+        {
+          "method": "left"
+        },
+        {
+          "method": "left"
+        },
+        {
+          "method": "left"
+        },
+        {
+          "method": "getSpider"
+        },
+        {
+          "method": "getDimensions"
+        }
+      ]
+    },
+    "Random values test": {
+      "constructor": ["iP10", "iP10", "iP10", "iP10", "cs"]
+    }
+  }
+}
+
+/*
+s - string
+i - integer
+c - character
+e - randomly select 1 name from array
+(eNames selects random name from Names array)
+(separator is comma and the length of the array is always the last e. g. aI5,50,3 means interval from 5 to 50 with 3 numbers)
+I - interval
+P - positive numbers
+N - negative numbers
+X - exact number
+Z - zero
+R - random number
+*/

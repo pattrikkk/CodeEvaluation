@@ -1,0 +1,37 @@
+{
+  "testcases": {
+    "Exact values test": {
+      "constructor": ["s", "sJames", "sBond"],
+      "methods": [
+        {
+          "method": "getLabel"
+        },
+        {
+          "method": "setTitle",
+          "parameters": ["sMr"]
+        },
+        {
+          "method": "getLabel"
+        }
+      ]
+    },
+    "Random values test": {
+      "constructor": ["sPeter", "sJanos"]
+    }
+  }
+}
+
+/*
+s - string
+i - integer
+c - character
+e - randomly select 1 name from array
+(eNames selects random name from Names array)
+(separator is comma and the length of the array is always the last e. g. aI5,50,3 means interval from 5 to 50 with 3 numbers)
+I - interval
+P - positive numbers
+N - negative numbers
+X - exact number
+Z - zero
+R - random number
+*/

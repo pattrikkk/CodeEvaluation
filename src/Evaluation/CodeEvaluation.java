@@ -1,3 +1,7 @@
+package Evaluation;
+
+import Zadanie1.Spider;
+import Zadanie1.ReferenceClass;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONTokener;
@@ -10,22 +14,27 @@ import java.lang.reflect.Method;
 import java.util.*;
 
 public class CodeEvaluation {
-    public static void main(String[] args) throws InvocationTargetException, IllegalAccessException, NoSuchMethodException, InstantiationException {
-        Class<?> referenceClass = ReferenceClass.class;
-        Class<?> testClass = TestClass.class;
 
+    public static void main(String[] args) {
+        try {
+            CodeEvaluation.setup(Zadanie2.ReferenceClass.class, Zadanie2.Label.class, "src/" + Zadanie2.ReferenceClass.class.getPackageName() + "/config.json");
+        } catch (InvocationTargetException | IllegalAccessException | NoSuchMethodException | InstantiationException e) {
+            e.printStackTrace();
+        }
+    }
 
+    public static void setup(Class<?> referenceClass, Class<?> testClass, String configPath) throws InvocationTargetException, IllegalAccessException, NoSuchMethodException, InstantiationException {
         List<Method>[] methods = findSameMethods(referenceClass, testClass);
         List<Method> sameMethods = methods[0];
         List<Method> missingMethods = methods[1];
 
-        JSONObject config = getDataFromJson();
+        JSONObject config = getDataFromJson(configPath);
         JSONObject tests = config.getJSONObject("testcases");
         String[] testNames = JSONObject.getNames(tests);
 
         for (String name : testNames) {
             System.out.println(name + ":");
-            runTest(sameMethods, name);
+            runTest(sameMethods, name, referenceClass, testClass, config);
             System.out.println();
         }
 
@@ -38,12 +47,11 @@ public class CodeEvaluation {
         }
     }
 
-    public static void runTest(List<Method> sameMethods, String testName) throws InvocationTargetException, IllegalAccessException, NoSuchMethodException, InstantiationException {
+    public static void runTest(List<Method> sameMethods, String testName, Class<?> referenceClass, Class<?> testClass, JSONObject config) throws InvocationTargetException, IllegalAccessException, NoSuchMethodException, InstantiationException {
 
-        JSONObject config = getDataFromJson();
         JSONObject configObject = config.getJSONObject("testcases");
         JSONArray parameters = configObject.optJSONObject(testName).optJSONArray("constructor");
-        Object[] arguments = generateParameters(parameters);
+        Object[] arguments = generateParameters(parameters, config);
 
         Class<?>[] argumentTypes = new Class[arguments.length];
 
@@ -53,27 +61,30 @@ public class CodeEvaluation {
 
         argumentTypes = changeType(argumentTypes);
 
-        Constructor<?> constructor = checkIfConstructorExists(ReferenceClass.class, argumentTypes);
-        Constructor<?> testConstructor = checkIfConstructorExists(TestClass.class, argumentTypes);
+        Constructor<?> constructor = checkIfConstructorExists(referenceClass, argumentTypes);
+        Constructor<?> testConstructor = checkIfConstructorExists(testClass, argumentTypes);
 
-        String constructorArguments = "";
+        StringBuilder constructorArguments = new StringBuilder();
         for (Object argument : arguments) {
             if (argument.getClass().isArray()) {
-                constructorArguments += Arrays.toString((int[]) argument) + ", ";
-            } else constructorArguments += argument.toString() + ", ";
+                constructorArguments.append(Arrays.toString((int[]) argument)).append(", ");
+            } else constructorArguments.append(argument.toString()).append(", ");
         }
 
-        constructorArguments = constructorArguments.substring(0, constructorArguments.length() - 2);
+        constructorArguments = new StringBuilder(constructorArguments.substring(0, constructorArguments.length() - 2));
 
         if (constructor == null || testConstructor == null) {
             System.out.println("Constructor(" + constructorArguments + "): (failed)");
             return;
         }
 
+        constructor.setAccessible(true);
+        testConstructor.setAccessible(true);
+
         System.out.println("Constructor(" + constructorArguments + "): (passed)");
 
-        ReferenceClass referenceInstance = (ReferenceClass) constructor.newInstance(arguments);
-        TestClass testInstance = (TestClass) testConstructor.newInstance(arguments);
+        Object referenceInstance = constructor.newInstance(arguments);
+        Object testInstance = testConstructor.newInstance(arguments);
 
         JSONArray methodsToRun = configObject.optJSONObject(testName).optJSONArray("methods");
 
@@ -84,17 +95,14 @@ public class CodeEvaluation {
                     .reduce(new JSONArray(), JSONArray::put, JSONArray::put);
         }
 
-        //Run methods from the JSON file
         for (int i = 0; i < methodsToRun.length(); i++) {
             String methodName = methodsToRun.getJSONObject(i).getString("method");
             JSONArray methodParameters = methodsToRun.getJSONObject(i).optJSONArray("parameters");
             Object[] methodArguments;
 
-            //Generate the arguments for the method
             if (methodParameters == null) methodArguments = new Object[0];
-            else methodArguments = generateParameters(methodParameters);
+            else methodArguments = generateParameters(methodParameters, config);
 
-            //Find the method in the reference class
             Method method = sameMethods.stream()
                     .filter(m -> m.getName().equals(methodName))
                     .findFirst()
@@ -103,11 +111,10 @@ public class CodeEvaluation {
                 System.out.println("Method " + methodName + ": (Not found)");
                 continue;
             }
-            Method testMethod = TestClass.class.getDeclaredMethod(method.getName(), method.getParameterTypes());
+            Method testMethod = testClass.getDeclaredMethod(method.getName(), method.getParameterTypes());
 
-            //Check if the argument count is correct
             if (method.getParameterCount() != methodArguments.length) {
-                System.out.println("Method " + method.getReturnType() + " " + method.getName() + "(" + Arrays.toString(method.getParameterTypes()).substring(1, Arrays.toString(method.getParameterTypes()).length() - 1) + "): (Wrong amount of arguments)");
+                System.out.println("Method " + method.getReturnType() + " " + method.getName() + "(" + Arrays.toString(method.getParameterTypes()).substring(1, Arrays.toString(method.getParameterTypes()).length() - 1) + "): (Wrong amount of arguments - error in reference class or config)");
                 continue;
             }
 
@@ -118,24 +125,22 @@ public class CodeEvaluation {
             }
             methodArgumentTypes = changeType(methodArgumentTypes);
 
-            //Check for argument type mismatch
             boolean argumentTypeMismatch = false;
             for (int j = 0; j < methodArguments.length; j++) {
                 if (!method.getParameterTypes()[j].equals(methodArgumentTypes[j])) {
                     argumentTypeMismatch = true;
-                    System.out.println("Method " + method.getReturnType() + " " + method.getName() + "(" + Arrays.toString(method.getParameterTypes()).substring(1, Arrays.toString(method.getParameterTypes()).length() - 1) + "): (Argument type mismatch)");
+                    System.out.println("Method " + method.getReturnType() + " " + method.getName() + "(" + Arrays.toString(method.getParameterTypes()).substring(1, Arrays.toString(method.getParameterTypes()).length() - 1) + "): (Argument type mismatch - error in reference class or config)");
                 }
             }
             if (argumentTypeMismatch) continue;
 
-            //Invoke the methods
+            method.setAccessible(true);
+            testMethod.setAccessible(true);
             Object referenceResult = method.invoke(referenceInstance, methodArguments);
             Object testResult = testMethod.invoke(testInstance, methodArguments);
 
-            //Create a string of argument types
             String argumentString = Arrays.toString(methodArguments).substring(1, Arrays.toString(methodArguments).length() - 1);
 
-            //Print the results
             if (referenceResult == null || referenceResult.equals(testResult)) {
                 System.out.println("✔ Method " + method.getReturnType() + " " + method.getName() + "(" + argumentString + ")" + ": (returned " + referenceResult + ") (passed)");
             } else {
@@ -144,7 +149,6 @@ public class CodeEvaluation {
         }
     }
 
-    //Checks if a constructor exists in a class
     public static Constructor<?> checkIfConstructorExists(Class<?> classA, Class<?>[] argumentTypes) {
         try {
             return classA.getConstructor(argumentTypes);
@@ -153,27 +157,20 @@ public class CodeEvaluation {
         }
     }
 
-    //Generates the parameters for the constructor and methods
-    public static Object[] generateParameters(JSONArray parameters) {
+    public static Object[] generateParameters(JSONArray parameters, JSONObject config) {
         Random random = new Random();
         Object[] arguments = new Object[parameters.length()];
 
         for (int i = 0; i < parameters.length(); i++) {
             if (parameters.getString(i).charAt(0) == 'i') {
-                arguments[i] = getIntValue(parameters.getString(i).substring(1), 100);
-            } else if (parameters.getString(i).charAt(0) == 'a') {
-                String[] divided = parameters.getString(i).substring(2).split(",");
-                int arrayLength = Integer.parseInt(divided[divided.length - 1]);
-                int[] testedArray = new int[arrayLength];
-                for (int j = 0; j < arrayLength; j++) {
-                    testedArray[j] = getIntValue(parameters.getString(i).substring(1), 100);
-                }
-                arguments[i] = testedArray;
+                arguments[i] = getIntValue(parameters.getString(i).substring(1));
             } else if (parameters.getString(i).charAt(0) == 's') {
                 String testedString = parameters.getString(i).substring(1);
                 arguments[i] = testedString;
+            } else if (parameters.getString(i).charAt(0) == 'c') {
+                char testedChar = parameters.getString(i).charAt(1);
+                arguments[i] = testedChar;
             } else {
-                JSONObject config = getDataFromJson();
                 String a = parameters.getString(i);
                 JSONArray stringArray = config.optJSONArray(a.substring(1));
                 String test = stringArray.getString(random.nextInt(stringArray.length()));
@@ -184,8 +181,8 @@ public class CodeEvaluation {
         return arguments;
     }
 
-    public static JSONObject getDataFromJson() {
-        try (FileReader fileReader = new FileReader("src/config.json")) {
+    public static JSONObject getDataFromJson(String path) {
+        try (FileReader fileReader = new FileReader(path)) {
             JSONTokener tokenizer = new JSONTokener(fileReader);
             return new JSONObject(tokenizer);
         } catch (IOException e) {
@@ -194,30 +191,24 @@ public class CodeEvaluation {
         }
     }
 
-    //Generates a random integer based on the input
-    public static int getIntValue(String input, int maxNumericValue) {
+    public static int getIntValue(String input) {
         char t = input.charAt(0);
+        int maxNumericValue = Integer.parseInt(input.substring(1).split(",")[0]);
         double val = 0;
         switch (t) {
             case 'P' -> val = 1 + (Math.random() * maxNumericValue);
-            // positive
             case 'N' -> val = -(Math.random() * maxNumericValue);
-            // negative
             case 'Z' -> val = 0;
-            // zero
             case 'R' -> val = -maxNumericValue + (Math.random() * (2 * maxNumericValue + 1));
-            // random
             case 'X' -> val = Double.parseDouble(input.substring(1).split(",")[0]);
-            // exact number
             case 'I' -> {
                 String[] interv = input.substring(1).split(",");
                 val = Double.parseDouble(interv[0]) + (int) (Math.random() * (Double.parseDouble(interv[1]) - Double.parseDouble(interv[0]) + 1));
-            } // interval
+            }
         }
         return (int) val;
     }
 
-    //Static analysis of the classes to get the same and missing methods
     public static List<Method>[] findSameMethods(Class<?> referenceClass, Class<?> testClass) {
         Method[] methodsA = referenceClass.getDeclaredMethods();
         Method[] methodsB = testClass.getDeclaredMethods();
@@ -246,6 +237,8 @@ public class CodeEvaluation {
         for (int i = 0; i < types.length; i++) {
             if (types[i].equals(Integer.class)) {
                 newTypes[i] = int.class;
+            } else if (types[i].equals(Character.class)) {
+                newTypes[i] = char.class;
             } else {
                 newTypes[i] = types[i];
             }
@@ -253,7 +246,6 @@ public class CodeEvaluation {
         return newTypes;
     }
 
-    //Checks if two methods have the same name, return type and parameter types
     public static boolean areMethodsSignatureEqual(Method methodA, Method methodB) {
         return Objects.equals(methodA.getName(), methodB.getName()) &&
                 Objects.equals(methodA.getReturnType(), methodB.getReturnType()) &&
