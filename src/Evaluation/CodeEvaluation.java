@@ -18,9 +18,9 @@ public class CodeEvaluation {
     public static int successfulMethods = 0;
     public static void main(String[] args) {
         try {
-            //CodeEvaluation.setup(Zadanie1.ReferenceClass.class, Zadanie1.Spider.class, "src/" + Zadanie1.ReferenceClass.class.getPackageName() + "/config.json");
+            CodeEvaluation.setup(Zadanie1.ReferenceClass.class, Zadanie1.Spider.class, "src/" + Zadanie1.ReferenceClass.class.getPackageName() + "/config.json");
             //CodeEvaluation.setup(Zadanie2.ReferenceClass.class, Zadanie2.Label.class, "src/" + Zadanie2.ReferenceClass.class.getPackageName() + "/config.json");
-            CodeEvaluation.setup(Zadanie3.ReferenceClass.class, Zadanie3.Bus.class, "src/" + Zadanie3.ReferenceClass.class.getPackageName() + "/config.json");
+            //CodeEvaluation.setup(Zadanie3.ReferenceClass.class, Zadanie3.Bus.class, "src/" + Zadanie3.ReferenceClass.class.getPackageName() + "/config.json");
         } catch (InvocationTargetException | IllegalAccessException | NoSuchMethodException | InstantiationException e) {
             e.printStackTrace();
         }

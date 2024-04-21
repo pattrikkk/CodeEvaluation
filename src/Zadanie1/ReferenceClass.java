@@ -1,4 +1,5 @@
-class ReferenceClass {
+package Zadanie1;
+public class ReferenceClass {
     private int rows, cols;
     private int x, y;
     char border;
