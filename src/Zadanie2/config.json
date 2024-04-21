@@ -1,6 +1,6 @@
 {
   "testcases": {
-    "Exact values test": {
+    "Test": {
       "constructor": ["s", "sJames", "sBond"],
       "methods": [
         {
@@ -12,11 +12,29 @@
         },
         {
           "method": "getLabel"
+        },
+        {
+          "method": "getTitle"
         }
       ]
     },
-    "Random values test": {
-      "constructor": ["sPeter", "sJanos"]
+    "Test": {
+      "constructor": ["sPeter", "sJanos"],
+      "methods": [
+        {
+          "method": "getLabel"
+        },
+        {
+          "method": "setTitle",
+          "parameters": ["sMr"]
+        },
+        {
+          "method": "getLabel"
+        },
+        {
+          "method": "getTitle"
+        }
+      ]
     }
   }
 }

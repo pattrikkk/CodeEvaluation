@@ -1,10 +1,7 @@
-package Zadanie1;
-
-public class ReferenceClass {
+class ReferenceClass {
     private int rows, cols;
     private int x, y;
     char border;
-
     public ReferenceClass(int r, int c, int xx, int yy, char b) {
         if (r < 5) rows = 10; else rows = r;
         if (c < 5) cols = 10; else cols = c;
@@ -12,7 +9,6 @@ public class ReferenceClass {
         if (yy <= 1 || yy >= rows) y = 2; else y = yy;
         border = b;
     }
-
     public String left() {
         if (x > 2) {
             x--;
@@ -20,7 +16,6 @@ public class ReferenceClass {
         }
         return "Au!";
     }
-
     public String right() {
         if (x < cols - 1) {
             x++;
@@ -28,7 +23,6 @@ public class ReferenceClass {
         }
         return "Au!";
     }
-
     public String up() {
         if (y > 2) {
             y--;
@@ -36,7 +30,6 @@ public class ReferenceClass {
         }
         return "Au!";
     }
-
     public String down() {
         if (y < rows - 1) {
             y++;
@@ -44,7 +37,6 @@ public class ReferenceClass {
         }
         return "Au!";
     }
-
     public String getInfo() {
         String full = "", empty= "", result;
         for (int i = 1; i <= cols - 2;i++) {
@@ -62,13 +54,10 @@ public class ReferenceClass {
         result += full;
         return result;
     }
-
     public String getSpider() {
         return "["+x+","+y+"]";
     }
-
     public String getDimensions() {
         return rows + " x " + cols;
     }
-
 }

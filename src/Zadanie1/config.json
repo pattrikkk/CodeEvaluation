@@ -4,10 +4,6 @@
       "constructor": ["iX10", "iX20", "iX5", "iX6", "cs"],
       "methods": [
         {
-          "method": "setValues",
-          "parameters": ["iX10", "iX20", "iX5", "iX10", "cs"]
-        },
-        {
           "method": "left"
         },
         {
@@ -32,6 +28,43 @@
     },
     "Random values test": {
       "constructor": ["iP10", "iP10", "iP10", "iP10", "cs"]
+    },
+    "Test 2": {
+      "constructor": ["iX8", "iX15", "iX5", "iX10", "cs"],
+      "methods": [
+        {
+          "method": "left"
+        },
+        {
+          "method": "getDimensions"
+        },
+        {
+          "method": "getSpider"
+        },
+        {
+          "method": "left"
+        },
+        {
+          "method": "left"
+        }
+      ]
+    },
+    "Test 3": {
+      "constructor": ["iX10", "iX10", "iX10", "iX10", "cs"],
+      "methods": [
+        {
+          "method": "getSpider"
+        },
+        {
+          "method": "left"
+        },
+        {
+          "method": "left"
+        },
+        {
+          "method": "getDimensions"
+        }
+      ]
     }
   }
 }

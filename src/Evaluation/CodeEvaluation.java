@@ -1,7 +1,5 @@
 package Evaluation;
 
-import Zadanie1.Spider;
-import Zadanie1.ReferenceClass;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONTokener;
@@ -14,10 +12,15 @@ import java.lang.reflect.Method;
 import java.util.*;
 
 public class CodeEvaluation {
-
+    public static int successfulTests = 0;
+    public static int allTests = 0;
+    public static int executedMethods = 0;
+    public static int successfulMethods = 0;
     public static void main(String[] args) {
         try {
-            CodeEvaluation.setup(Zadanie2.ReferenceClass.class, Zadanie2.Label.class, "src/" + Zadanie2.ReferenceClass.class.getPackageName() + "/config.json");
+            //CodeEvaluation.setup(Zadanie1.ReferenceClass.class, Zadanie1.Spider.class, "src/" + Zadanie1.ReferenceClass.class.getPackageName() + "/config.json");
+            //CodeEvaluation.setup(Zadanie2.ReferenceClass.class, Zadanie2.Label.class, "src/" + Zadanie2.ReferenceClass.class.getPackageName() + "/config.json");
+            CodeEvaluation.setup(Zadanie3.ReferenceClass.class, Zadanie3.Bus.class, "src/" + Zadanie3.ReferenceClass.class.getPackageName() + "/config.json");
         } catch (InvocationTargetException | IllegalAccessException | NoSuchMethodException | InstantiationException e) {
             e.printStackTrace();
         }
@@ -34,8 +37,12 @@ public class CodeEvaluation {
 
         for (String name : testNames) {
             System.out.println(name + ":");
+            allTests++;
             runTest(sameMethods, name, referenceClass, testClass, config);
-            System.out.println();
+            if (successfulMethods == executedMethods) successfulTests++;
+            System.out.println("Successful/Executed methods: " + successfulMethods + "/" + executedMethods + " " + (100.0 / executedMethods) * successfulMethods + "%\n");
+            successfulMethods = 0;
+            executedMethods = 0;
         }
 
         if (missingMethods.size() > 0) {
@@ -45,6 +52,7 @@ public class CodeEvaluation {
                 System.out.println(method.getReturnType() + " " + method.getName() + "(" + parameters.substring(1, parameters.length()-1) + ")");
             }
         }
+        System.out.println("\nSuccessful/Executed tests: " + successfulTests + "/" + allTests + " " + 100.0/allTests*successfulTests + "%");
     }
 
     public static void runTest(List<Method> sameMethods, String testName, Class<?> referenceClass, Class<?> testClass, JSONObject config) throws InvocationTargetException, IllegalAccessException, NoSuchMethodException, InstantiationException {
@@ -81,10 +89,33 @@ public class CodeEvaluation {
         constructor.setAccessible(true);
         testConstructor.setAccessible(true);
 
-        System.out.println("Constructor(" + constructorArguments + "): (passed)");
+        Object referenceInstance = null;
+        Object testInstance = null;
+        String message = "";
+        String testMessage = "";
+        try {
+            referenceInstance = constructor.newInstance(arguments);
+        } catch (Exception e) {
+            message = e.getCause().toString();
+        }
+        try {
+            testInstance = testConstructor.newInstance(arguments);
+        } catch (Exception e) {
+            testMessage = e.getCause().toString();
+        }
 
-        Object referenceInstance = constructor.newInstance(arguments);
-        Object testInstance = testConstructor.newInstance(arguments);
+        if (!message.equals(testMessage)) {
+            System.out.println("Constructor(" + constructorArguments + "): (" + testMessage + " expected " + message + ") (failed)");
+            return;
+        }
+
+        if (!message.equals("")) {
+            System.out.println("Constructor(" + constructorArguments + "): (" + message + ") (passed)");
+            return;
+        }
+
+
+        System.out.println("Constructor(" + constructorArguments + "): (passed)");
 
         JSONArray methodsToRun = configObject.optJSONObject(testName).optJSONArray("methods");
 
@@ -100,6 +131,8 @@ public class CodeEvaluation {
             JSONArray methodParameters = methodsToRun.getJSONObject(i).optJSONArray("parameters");
             Object[] methodArguments;
 
+            executedMethods++;
+
             if (methodParameters == null) methodArguments = new Object[0];
             else methodArguments = generateParameters(methodParameters, config);
 
@@ -108,7 +141,7 @@ public class CodeEvaluation {
                     .findFirst()
                     .orElse(null);
             if (method == null) {
-                System.out.println("Method " + methodName + ": (Not found)");
+                System.out.println("Method " + methodName + "(): (Not found)");
                 continue;
             }
             Method testMethod = testClass.getDeclaredMethod(method.getName(), method.getParameterTypes());
@@ -136,12 +169,26 @@ public class CodeEvaluation {
 
             method.setAccessible(true);
             testMethod.setAccessible(true);
-            Object referenceResult = method.invoke(referenceInstance, methodArguments);
-            Object testResult = testMethod.invoke(testInstance, methodArguments);
+
+            Object referenceResult;
+            Object testResult;
+
+            try {
+                referenceResult = method.invoke(referenceInstance, methodArguments);
+            } catch (Exception e) {
+                referenceResult = e.getCause().toString();
+            }
+            try {
+                testResult = testMethod.invoke(testInstance, methodArguments);
+            } catch (Exception e) {
+                testResult = e.getCause().toString();
+            }
+
 
             String argumentString = Arrays.toString(methodArguments).substring(1, Arrays.toString(methodArguments).length() - 1);
 
             if (referenceResult == null || referenceResult.equals(testResult)) {
+                successfulMethods++;
                 System.out.println("✔ Method " + method.getReturnType() + " " + method.getName() + "(" + argumentString + ")" + ": (returned " + referenceResult + ") (passed)");
             } else {
                 System.out.println("X Method " + method.getReturnType() + " " + method.getName() + "(" + argumentString + ")" + ": (returned " + testResult + " expected " + referenceResult + ") (failed)");
@@ -160,7 +207,6 @@ public class CodeEvaluation {
     public static Object[] generateParameters(JSONArray parameters, JSONObject config) {
         Random random = new Random();
         Object[] arguments = new Object[parameters.length()];
-
         for (int i = 0; i < parameters.length(); i++) {
             if (parameters.getString(i).charAt(0) == 'i') {
                 arguments[i] = getIntValue(parameters.getString(i).substring(1));
@@ -177,7 +223,6 @@ public class CodeEvaluation {
                 arguments[i] = test;
             }
         }
-
         return arguments;
     }
 
